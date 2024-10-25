@@ -1,0 +1,14 @@
+ Ignore environment files
+.env
+
+# Ignore compiled code
+*.o
+*.pyc
+
+# Ignore directories
+tuliunge/
+venv/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
