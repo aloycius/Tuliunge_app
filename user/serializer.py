@@ -1,6 +1,8 @@
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate
+
 
 User = get_user_model()
 
@@ -28,3 +30,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        # Authenticate user
+        user = authenticate(email=data.get('email'), password=data.get('password'))
+        
+        if user is None:
+            raise serializers.ValidationError("Invalid credentials. Please try again.")
+        
+        # Include user in validated_data if authentication succeeds
+        data['user'] = user
+        return data
