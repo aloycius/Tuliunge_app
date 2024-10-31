@@ -16,3 +16,10 @@ class Booking(models.Model):
     ride = models.ForeignKey(Ride, on_delete=models.CASCADE)
     passenger = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     booked_on = models.DateTimeField(auto_now_add=True)
+
+class Driver(models.Model):
+    # Define fields here, for example:
+    name = models.CharField(max_length=100)
+    license_number = models.CharField(max_length=50, unique=True)
+    # other fields
+
