@@ -10,7 +10,9 @@ class Ride(models.Model):
     destination = models.CharField(max_length=255)
     departure_time = models.DateTimeField()
     available_seats = models.PositiveIntegerField()
+    date = models.DateTimeField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    driver = models.ForeignKey("Driver", on_delete=models.CASCADE)
 
 class Booking(models.Model):
     ride = models.ForeignKey(Ride, on_delete=models.CASCADE)

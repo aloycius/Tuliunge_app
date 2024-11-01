@@ -7,5 +7,7 @@ from .views import RideListView, RideDetailView, BookRideView
 urlpatterns = [
     path('', RideListView.as_view(), name='ride-list'),
     path('<int:id>/', RideDetailView.as_view(), name='ride-detail'),
-    path('<int:id>/book/', BookRideView.as_view(), name='ride-book'),
+    path('book/<int:id>/', BookRideView.as_view(), name='ride-book'),
+    path('ride/<int:pk>/', views.RideDetailView.as_view(), name='ride_detail'),
+    path('rides/', views.RideListView.as_view(), name='list_rides'),
 ]

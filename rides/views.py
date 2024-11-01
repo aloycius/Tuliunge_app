@@ -1,5 +1,6 @@
 # views.py
 from rest_framework.views import APIView
+from django.views.generic import ListView
 from rest_framework.response import Response
 from rest_framework import status, generics
 from .models import Ride, Booking
@@ -16,6 +17,7 @@ class RideCreateView(generics.CreateAPIView):
 
 # List and filter available rides
 class RideListView(generics.ListAPIView):
+    queryset = Ride.objects.all()
     serializer_class = RideSerializer
 
     def get_queryset(self):
@@ -63,5 +65,11 @@ class BookRideView(APIView):
 
         booking_serializer = BookingSerializer(booking)
         return Response(booking_serializer.data, status=status.HTTP_201_CREATED)
+    
+    class RideListView(ListView):
+       model = Ride
+       template_name = 'rides/ride_list.html'
+       context_object_name = 'rides'
+    
 
 
