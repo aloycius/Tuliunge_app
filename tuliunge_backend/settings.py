@@ -97,8 +97,13 @@ DATABASES = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
+        'rest_framework.authentication.SessionAuthentication',  # or other authentication class
+        'rest_framework.authentication.BasicAuthentication', 
 
+    ],
+
+     'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',  # Permission class
     ],
 
     'DEFAULT_RENDERER_CLASSES': [

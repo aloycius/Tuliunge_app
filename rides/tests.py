@@ -10,6 +10,8 @@ from .models import Ride, Booking
 from django.utils import timezone
 from datetime import timedelta
 from rides.models import Driver, Ride
+from rest_framework.test import APIClient
+
 
 User = get_user_model()
 
@@ -51,7 +53,7 @@ class RideManagementTests(APITestCase):
 
     def test_create_ride(self):
         """Test creating a new ride."""
-        url = reverse('create_ride')
+        url = reverse('rides:create_ride')  # Use the namespace
         data = {
             "departure_location": "City E",
             "destination": "City F",
@@ -104,21 +106,27 @@ class RideManagementTests(APITestCase):
 
     def test_book_ride_insufficient_seats(self):
         """Test booking a ride with insufficient seats."""
+        data = {
+            "seats": 5  # Requesting 5 seats, but only 3 are available
+        }
         url = reverse('book_ride', kwargs={'id': self.ride1.pk})
         data = {"seats_booked": 4}  # Requesting more seats than available
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["error"], "Not enough seats available")
 
+    """
     def test_double_booking_prevention(self):
-        """Test preventing double booking by the same user."""
+        Test preventing double booking by the same user.
         #url = reverse('book_ride', kwargs={'id': self.ride1.pk})
         #data = {"seats_booked": 1}
         data = {
         "id": self.ride1.pk,
         "destination": self.ride1.destination,
         "date": self.ride1.date,
+        "seats_booked": 1,
         # Add any other fields that should be included in the response
+    
     }
         url = reverse('rides:book_ride', kwargs={'id': self.ride1.pk})  # Correct the reverse call
         response = self.client.post(url)  # Assuming you're making a POST request to book a ride
@@ -137,5 +145,17 @@ class RideManagementTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["error"], "You have already booked this ride")
 
+"""
+def test_double_booking_prevention(self):
+    """Test preventing double booking by the same user."""
+    # First booking
+    data = {"seats": 1}
+    url = reverse('book_ride', kwargs={'id': self.ride1.pk})
+    response = self.client.post(url, data, format='json')
+    self.assertEqual(response.status_code, 201)  # First booking should be successful
 
+    # Attempt to book the same ride again
+    response = self.client.post(url, data, format='json')
+    self.assertEqual(response.status_code, 400)  # Second booking should fail with 400
+    self.assertEqual(response.data["error"], "User has already booked this ride.")
 
