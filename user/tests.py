@@ -8,6 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from user.models import User
+import json
 
 class UserAuthenticationTests(APITestCase):
     
@@ -39,10 +40,11 @@ class UserAuthenticationTests(APITestCase):
             # Missing "name", "phone_number", "password"
         }
         response = self.client.post(self.register_url, data)
+        respData = json.loads(response)
         
         # Check for bad request due to missing fields
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("password", response.data)  # Assuming password field is required
+        self.assertIn("password", respData.data)  # Assuming password field is required
 
     def test_user_login(self):
         # Register a user for testing login

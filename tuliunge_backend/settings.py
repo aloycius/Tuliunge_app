@@ -28,7 +28,9 @@ SECRET_KEY = 'django-insecure-9igt@ibiz534r*pmes3m(g1+ymjvj=17rrqqk62y9nq$e!p6*)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "*"
+]
 
 
 # Application definition
@@ -41,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    "rest_framework_api_key",
     'rides',
     'authentication',
     'user',
@@ -94,16 +97,24 @@ DATABASES = {
     }
 }
 
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',  # Default authentication
+)
+
 REST_FRAMEWORK = {
+    
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',  # or other authentication class
+        'rest_framework.authentication.SessionAuthentication',
+     
         'rest_framework.authentication.BasicAuthentication', 
 
     ],
 
      'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',  # Permission class
+        "rest_framework_api_key.permissions.HasAPIKey",
+        'rest_framework.permissions.AllowAny',
     ],
 
     'DEFAULT_RENDERER_CLASSES': [
