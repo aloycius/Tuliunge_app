@@ -72,6 +72,7 @@ class LoginView(APIView):
                 }, status=status.HTTP_200_OK)
             return Response({"msg": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 #LOGOUT API
     
 class LogoutView(APIView):
