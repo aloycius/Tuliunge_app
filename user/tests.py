@@ -96,8 +96,10 @@ class AuthTests(APITestCase):
         }
         
         # Register a user to use in tests
-        self.client.post(self.register_url, self.test_user, format='json')
-
+        register_response = self.client.post(self.register_url, self.test_user, format='json')
+        print("Registration Status Code:", register_response.status_code)  # Debugging
+        print("Registration Response Data:", register_response.json())  # Debugging
+        
     def get_token(self):
         # Helper function to get a JWT token for the user
         response = self.client.post(self.login_url, {
@@ -116,9 +118,13 @@ class AuthTests(APITestCase):
             'password': 'strongpassword123'
         }, format='json')
         
+        
         # Check that the registration was successful
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn('token', response.data)
+        #self.assertIn('token', response.data)
+        self.assertIn('msg', response.data)  # Check for a success message
+        self.assertEqual(response.data['msg'], 'User registered successfully')
+
     
     #test_user_login
     def test_user_login(self):
@@ -139,11 +145,17 @@ class AuthTests(APITestCase):
         # Check if login is successful and a token is returned
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data)
+        if 'access' not in response.data:
+            print("Login failed: 'access' token not found in response.")
     
     #test_user_logout
     def test_user_logout(self):
         # Get a token
         token = self.get_token()
+        
+        # Ensure the token is not None or empty
+        if not token:
+         self.fail("Token was not returned during login.")
         
         # Add the token to the header
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
@@ -151,6 +163,10 @@ class AuthTests(APITestCase):
         # Perform logout
         response = self.client.post(self.logout_url)
         
+        # Check if logout is successful
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['msg'], "Successfully logged out.")
+
         # Check if logout is successful
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['msg'], "Successfully logged out.")
