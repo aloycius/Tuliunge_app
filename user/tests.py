@@ -11,6 +11,9 @@ from user.models import User
 import json
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.test import APIClient, force_authenticate
+from django.contrib.auth import get_user_model
+
 
 
 """
@@ -103,10 +106,17 @@ class AuthTests(APITestCase):
     def get_token(self):
         # Helper function to get a JWT token for the user
         response = self.client.post(self.login_url, {
-            'email': self.test_user['email'],
-            'password': self.test_user['password']
-        }, format='json')
+        'email': self.test_user['email'],
+        'password': self.test_user['password']
+    }, format='json')
+    
+    # Debugging information
+        print("Login for Token Status Code:", response.status_code)
+        print("Login for Token Response Data:", response.json())
+    
         return response.data.get('access')
+
+    
     
 
     #test_user_registration
@@ -136,7 +146,7 @@ class AuthTests(APITestCase):
         """
         response = self.client.post( 
              reverse('login'),
-             {'email': 'winny@example.com', 'password': 'strongpassword123'},
+             {'email': self.test_user['email'], 'password': self.test_user['password']},
              format='json')
         print("Response Status Code:", response.status_code)  # Debugging
         print("Response Data:", response.json())  # Debugging
@@ -150,28 +160,55 @@ class AuthTests(APITestCase):
     
     #test_user_logout
     def test_user_logout(self):
+        
         # Get a token
         token = self.get_token()
         
         # Ensure the token is not None or empty
         if not token:
          self.fail("Token was not returned during login.")
+
+        # Debugging information for the token
+        print("Token retrieved for logout:", token)
+    
+        # Ensure a valid token is received
+        self.assertIsNotNone(token, "Failed to retrieve a valid token for logout")
+    
+    
         
         # Add the token to the header
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
         
         # Perform logout
-        response = self.client.post(self.logout_url)
+        response = self.client.post(self.logout_url,{}, format='json')
+
+        # Debugging the response
+        print("Logout Response Status Code:", response.status_code)
+        try:
+          print("Logout Response Data:", response.json())
+        except Exception as e:
+          print(f"Failed to parse JSON response: {e}")
         
         # Check if logout is successful
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['msg'], "Successfully logged out.")
 
-        # Check if logout is successful
+    """
+    # Manually authenticate the user
+        user = get_user_model().objects.get(email=self.test_user['email'])  # Assuming a User model
+        self.client.force_authenticate(user=user)
+
+    # Perform logout
+        response = self.client.post(self.logout_url)
+
+    # Debugging the response
+        print("Logout Response Status Code:", response.status_code)
+        print("Logout Response Data:", response.json())
+
+    # Check if logout is successful
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['msg'], "Successfully logged out.")
-
-
+        self.assertEqual(response.data.get('msg'), "Successfully logged out.")
+  """
 
         
 
