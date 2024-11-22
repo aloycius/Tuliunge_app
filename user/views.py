@@ -74,7 +74,6 @@ class LoginView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 #LOGOUT API
-    
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 

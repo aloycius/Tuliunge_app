@@ -159,6 +159,7 @@ class AuthTests(APITestCase):
             print("Login failed: 'access' token not found in response.")
     
     #test_user_logout
+    """
     def test_user_logout(self):
         
         # Get a token
@@ -180,7 +181,8 @@ class AuthTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
         
         # Perform logout
-        response = self.client.post(self.logout_url,{}, format='json')
+        response = self.client.post(self.logout_url,{'refresh': token}, format='json')
+        #response = self.client.post(self.logout_url, format='json')
 
         # Debugging the response
         print("Logout Response Status Code:", response.status_code)
@@ -192,6 +194,7 @@ class AuthTests(APITestCase):
         # Check if logout is successful
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['msg'], "Successfully logged out.")
+    """
 
     """
     # Manually authenticate the user
@@ -209,6 +212,56 @@ class AuthTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('msg'), "Successfully logged out.")
   """
+    
+def test_user_logout(self):
+    # Get a token (and refresh token)
+    response = self.client.post(self.login_url, {
+        'email': self.test_user['email'],
+        'password': self.test_user['password']
+    }, format='json')
+    
+    # Debugging information for the login response
+    print("Login Response Status Code:", response.status_code)
+    print("Login Response Data:", response.json())
+    
+    # Ensure the login is successful
+    self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    # Get tokens from the response
+    access_token = response.data.get('access')
+    refresh_token = response.data.get('refresh')
+    
+    # Debugging information for tokens
+    print("Access Token:", access_token)
+    print("Refresh Token:", refresh_token)
+
+    # Ensure valid tokens are received
+    self.assertIsNotNone(access_token, "Failed to retrieve a valid access token for logout")
+    self.assertIsNotNone(refresh_token, "Failed to retrieve a valid refresh token for logout")
+    
+    # Add the access token to the header for the logout request
+    self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+    
+    # Debugging information for headers before logout
+    print("Headers before logout attempt:", self.client._credentials)
+    
+    # Perform logout
+    response = self.client.post(self.logout_url, {
+        'refresh': refresh_token  # Include refresh token for logout if required
+    }, format='json')
+    
+    # Debugging the logout response
+    print("Logout Response Status Code:", response.status_code)
+    try:
+        print("Logout Response Data:", response.json())
+    except Exception as e:
+        print(f"Failed to parse JSON response: {e}")
+        print("Raw Response Content:", response.content)
+    
+    # Check if logout is successful
+    self.assertEqual(response.status_code, status.HTTP_200_OK)
+    self.assertEqual(response.data.get('msg'), "Successfully logged out.")
+
 
         
 
