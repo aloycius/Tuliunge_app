@@ -13,6 +13,9 @@ from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.test import APIClient, force_authenticate
 from django.contrib.auth import get_user_model
+from datetime import timedelta
+from rest_framework_simplejwt.tokens import AccessToken
+from django.utils.timezone import now
 
 
 
@@ -102,6 +105,12 @@ class AuthTests(APITestCase):
         register_response = self.client.post(self.register_url, self.test_user, format='json')
         print("Registration Status Code:", register_response.status_code)  # Debugging
         print("Registration Response Data:", register_response.json())  # Debugging
+
+        # Get the user instance for later use in testing expired token
+        self.user = User.objects.get(name=self.test_user_data['name'],
+                                     email=self.test_user_data['email'],
+                                     phone_number=self.test_user_data['phone_number'],
+                                     password=self.test_user_data['password'])  # Adjust for your User model
         
     def get_token(self):
         # Helper function to get a JWT token for the user
@@ -117,8 +126,6 @@ class AuthTests(APITestCase):
         return response.data.get('access')
 
     
-    
-
     #test_user_registration
     def test_user_registration(self):
         response = self.client.post(self.register_url, {
@@ -158,6 +165,52 @@ class AuthTests(APITestCase):
         if 'access' not in response.data:
             print("Login failed: 'access' token not found in response.")
     
+    def test_invalid_login_credentials(self):
+     response = self.client.post(self.login_url, {
+        'email': 'test@example.com',
+        'password': 'wrongpassword'
+    }, format='json')
+     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+     self.assertIn('non_field_errors', response.data)
+    
+
+    def test_missing_login_credentials(self):
+     response = self.client.post(self.login_url, {}, format='json')
+     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+     self.assertIn('email', response.data)
+     self.assertIn('password', response.data)
+    
+    def test_expired_token_access(self):
+    # Create an expired token manually
+     expired_token = AccessToken.for_user(self.user)
+     expired_token.set_exp(lifetime=timedelta(seconds=-1))  # Set expiry in the past
+
+     self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {expired_token}')
+    
+     response = self.client.get(self.protected_url)  # Replace with an actual protected endpoint URL
+     self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    
+    def test_access_with_invalid_token(self):
+    # Use a deliberately malformed token
+     self.client.credentials(HTTP_AUTHORIZATION='Bearer invalidtoken12345')
+    
+     response = self.client.get(self.login_url)  # Replace with an actual protected endpoint URL
+     self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    
+
+    def test_refresh_token_flow(self):
+    # Use the refresh token to get a new access token
+     response = self.client.post('/api/token/refresh/', {  # Replace with your refresh token endpoint
+        'refresh': self.refresh_token
+    }, format='json')
+    
+     self.assertEqual(response.status_code, status.HTTP_200_OK)
+     self.assertIn('access', response.data)
+    
+    
+    
+
+
     #test_user_logout
     """
     def test_user_logout(self):
@@ -212,6 +265,32 @@ class AuthTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data.get('msg'), "Successfully logged out.")
   """
+def test_logout_without_token(self):
+     response = self.client.post(self.logout_url)
+     self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+def test_logout_with_expired_token(self):
+      # Generate a token using the `AccessToken` class for the user
+     access_token = AccessToken.for_user(self.user)
+     
+    # Use an expired token for the logout process
+     expired_token = AccessToken.for_user(self.user)
+     expired_token.set_exp(lifetime=timedelta(seconds=-1))  # Set expiry in the past
+
+     # Convert the expired token to a string for use in authorization
+     expired_token = str(access_token)
+    
+     self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {expired_token}')
+
+     # Try to access the protected endpoint with the expired token
+     response = self.client.post(self.logout_url)
+     self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+def test_access_protected_route_without_authentication(self):
+    response = self.client.get(self.protected_url)  # Replace with an actual protected endpoint URL
+    self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
     
 def test_user_logout(self):
     # Get a token (and refresh token)
@@ -261,6 +340,18 @@ def test_user_logout(self):
     # Check if logout is successful
     self.assertEqual(response.status_code, status.HTTP_200_OK)
     self.assertEqual(response.data.get('msg'), "Successfully logged out.")
+
+def test_double_logout_attempt(self):
+    # Perform the first logout
+    token = self.get_token()
+    self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+    response = self.client.post(self.logout_url)
+    self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # Attempt to logout again with the same token
+    response = self.client.post(self.logout_url)
+    self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 
         
