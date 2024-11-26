@@ -19,6 +19,7 @@ from django.utils.timezone import now
 
 
 
+
 """
 class UserAuthenticationTests(APITestCase):
     
@@ -84,6 +85,8 @@ class UserAuthenticationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("non_field_errors", response.data)  # Adjust if serializer uses another error field
 """
+ # Use the correct User model
+User = get_user_model()
 
 class AuthTests(APITestCase):
 
@@ -92,6 +95,7 @@ class AuthTests(APITestCase):
         self.register_url = reverse('register')  # The URL name you used for registration
         self.login_url = reverse('login')        # The URL name you used for login
         self.logout_url = reverse('logout')      # The URL name you used for logout
+        self.refresh_url = reverse('token_refresh')  # 'token_refresh' is the name given in urls.py
 
         # Create a test user
         self.test_user = {
@@ -101,16 +105,23 @@ class AuthTests(APITestCase):
             'password': 'strongpassword123'
         }
         
+        # Create the test user in the database
+        self.user = User.objects.create_user(
+            name=self.test_user['name'],
+            email=self.test_user['email'],
+            phone_number=self.test_user['phone_number'],
+            password=self.test_user['password']
+        )
+
+        
         # Register a user to use in tests
         register_response = self.client.post(self.register_url, self.test_user, format='json')
         print("Registration Status Code:", register_response.status_code)  # Debugging
         print("Registration Response Data:", register_response.json())  # Debugging
 
+        
         # Get the user instance for later use in testing expired token
-        self.user = User.objects.get(name=self.test_user_data['name'],
-                                     email=self.test_user_data['email'],
-                                     phone_number=self.test_user_data['phone_number'],
-                                     password=self.test_user_data['password'])  # Adjust for your User model
+        self.user = User.objects.get(email=self.test_user['email'])  # Adjust for your User model
         
     def get_token(self):
         # Helper function to get a JWT token for the user
@@ -118,12 +129,27 @@ class AuthTests(APITestCase):
         'email': self.test_user['email'],
         'password': self.test_user['password']
     }, format='json')
+
+    # Extract tokens from the response
+        self.access_token = response.data.get('access')
+        self.refresh_token = response.data.get('refresh')
+        #self.assertIsNotNone(self.refresh_token, "Refresh token should be returned during login")
+
+        # Ensure tokens are not None or empty
+        assert self.access_token, "Access token not returned"
+        assert self.refresh_token, "Refresh token not returned"
+
     
     # Debugging information
         print("Login for Token Status Code:", response.status_code)
         print("Login for Token Response Data:", response.json())
+
+
     
-        return response.data.get('access')
+        #self.access_token = access_token
+        #self.refresh_token = refresh_token
+        #return response.data.get('access')
+        return self.access_token, self.refresh_token
 
     
     #test_user_registration
@@ -187,7 +213,7 @@ class AuthTests(APITestCase):
 
      self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {expired_token}')
     
-     response = self.client.get(self.protected_url)  # Replace with an actual protected endpoint URL
+     response = self.client.get(self.login_url)  # Replace with an actual protected endpoint URL
      self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
     
     def test_access_with_invalid_token(self):
@@ -199,13 +225,20 @@ class AuthTests(APITestCase):
     
 
     def test_refresh_token_flow(self):
+     access_token, refresh_token = self.get_token()
     # Use the refresh token to get a new access token
-     response = self.client.post('/api/token/refresh/', {  # Replace with your refresh token endpoint
-        'refresh': self.refresh_token
+     response = self.client.post(self.refresh_url, {  # Replace with your refresh token endpoint
+        'refresh': refresh_token
     }, format='json')
-    
+     self.access_token = response.data.get('access')
+     self.refresh_token = response.data.get('refresh')
      self.assertEqual(response.status_code, status.HTTP_200_OK)
-     self.assertIn('access', response.data)
+     self.assertIn('access', response.data, "Access token should be in the response")
+
+     print("Refresh Token:", self.refresh_token)
+     print("Refresh URL:", self.refresh_url)
+     print("Response Status Code:", response.status_code)
+     print("Response Data:", response.data)
     
     
     
@@ -272,7 +305,7 @@ def test_logout_without_token(self):
 def test_logout_with_expired_token(self):
       # Generate a token using the `AccessToken` class for the user
      access_token = AccessToken.for_user(self.user)
-     
+
     # Use an expired token for the logout process
      expired_token = AccessToken.for_user(self.user)
      expired_token.set_exp(lifetime=timedelta(seconds=-1))  # Set expiry in the past
