@@ -18,12 +18,14 @@ class TestAuth:
         assert response.data.get("msg") == "User registered successfully"
     
     def test_user_login(self, api_client, create_user, auth_urls):
+    
         user = create_user(
             name="Test User",
             email="testuser@example.com",
             phone_number="1234567890",
             password="password123"
         )
+
         data = {
             "email": "testuser@example.com",
             "password": "password123"
@@ -71,6 +73,7 @@ class TestAuth:
         response = api_client.post(auth_urls["refresh"], {"refresh": refresh_token})
         assert response.status_code == status.HTTP_200_OK
         assert "access" in response.data
+        
     def test_user_logout(self, api_client, create_user, auth_urls):
         """Test if a user can log out successfully."""
         # Create a user and log in to get a valid token
@@ -85,16 +88,26 @@ class TestAuth:
             "password": "password123"
         }
         login_response = api_client.post(auth_urls["login"], login_data)
+
         access_token = login_response.data.get("access")
+        refresh_token = login_response.data.get("refresh")
+        assert access_token and refresh_token  # Ensure tokens are present
 
         # Authenticate the user with the token
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
 
         # Perform logout
-        response = api_client.post(auth_urls["logout"])
+        logout_data = {"refresh": refresh_token}
+        response = api_client.post(auth_urls["logout"], data = logout_data)
+        
+        # Debugging the logout response
+        print("Login response data:", login_response.data)
+        print("Logout response data:", response.data)
+        print("Logout response status code:", response.status_code)
+
 
         assert response.status_code == status.HTTP_205_RESET_CONTENT
-        assert response.data.get("msg") == "Successfully logged out"
+        assert response.data.get("msg") == "Successfully logged out."
     
     def test_logout_with_invalid_token(self, api_client, auth_urls):
         """Test logout with an invalid or missing token."""
