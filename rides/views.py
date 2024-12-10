@@ -1,23 +1,67 @@
 # views.py
-from rest_framework.views import APIView
-from django.views.generic import ListView
+from rest_framework import generics, status
 from rest_framework.response import Response
-from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
-from rest_framework import status, generics
-from .models import Ride, Booking
-from .serializer import RideSerializer, BookingSerializer
-from django.db.models import F
-from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
-from django.views.decorators.http import require_POST
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import DjangoModelPermissionsOrAnonReadOnly
+from .models import Ride, Booking
+from .serializer import RideSerializer, RideDetailSerializer, BookingSerializer
 
+# POST /api/rides - Create a new ride
+class RideCreateView(generics.CreateAPIView):
+    queryset = Ride.objects.all()
+    serializer_class = RideSerializer
+    permission_classes = [IsAuthenticated]
 
+# GET /api/rides - List available rides (with optional filters)
+class RideListView(generics.ListAPIView):
+    serializer_class = RideSerializer
 
+    def get_queryset(self):
+        queryset = Ride.objects.all()
+        departure_location = self.request.query_params.get('departure_location')
+        destination = self.request.query_params.get('destination')
+        date = self.request.query_params.get('date')
+
+        if departure_location:
+            queryset = queryset.filter(departure_location__icontains=departure_location)
+        if destination:
+            queryset = queryset.filter(destination__icontains=destination)
+        if date:
+            queryset = queryset.filter(departure_time__date=date)
+
+        return queryset
+
+# GET /api/rides/{id} - Get ride details
+class RideDetailView(generics.RetrieveAPIView):
+    queryset = Ride.objects.all()
+    serializer_class = RideDetailSerializer
+
+# POST /api/rides/{id}/book - Book a ride
+class RideBookingView(generics.CreateAPIView):
+    serializer_class = BookingSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        ride_id = kwargs.get('id')
+        ride = Ride.objects.filter(id=ride_id).first()
+
+        if not ride:
+            return Response({"error": "Ride not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if ride.available_seats < 1:
+            return Response({"error": "No seats available"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if the user already booked this ride
+        if Booking.objects.filter(ride=ride, user=request.user).exists():
+            return Response({"error": "You have already booked this ride"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create a booking
+        booking = Booking.objects.create(ride=ride, user=request.user)
+        ride.available_seats -= 1
+        ride.save()
+
+        return Response(BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
+
+"""
 @require_POST  # Ensures that this view can only be accessed via POST requests
 def book_ride(request, id):
     ride = get_object_or_404(Ride, id=id)
@@ -41,14 +85,12 @@ def book_ride(request, id):
 
     # Return a success response
     return JsonResponse({"message": f"You have successfully booked {seats_requested} seat(s)!"}, status=200)
-"""
+
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication, BasicAuthentication])  # Set your auth classes here
 @permission_classes([IsAuthenticatedOrReadOnly])  # Or another appropriate permission class
 def list_rides(request):
    #list
-"""
-
 # Create a new ride
 class RideCreateView(generics.CreateAPIView):
     queryset = Ride.objects.all()
@@ -112,12 +154,13 @@ class BookRideView(APIView):
         booking_serializer = BookingSerializer(booking)
         return Response(booking_serializer.data, status=status.HTTP_201_CREATED)
     
-    """"
+    
     class RideListView(ListView):
        model = Ride
        template_name = 'rides/ride_list.html'
        context_object_name = 'rides'
-    """
+    
+
     
     class RideListView(ListView):
      queryset = Ride.objects.all()
@@ -131,7 +174,7 @@ class BookRideView(APIView):
             departure_location=self.request.query_params.get('departure_location'),
             date=self.request.query_params.get('date')
         )
-    
+"""  
 
 
     
