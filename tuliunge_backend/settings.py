@@ -14,6 +14,10 @@ from pathlib import Path
 #from decouple import config
 from datetime import timedelta
 import os
+import django
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tuliunge_backend.settings')
+django.setup()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,6 +40,7 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'tuliunge_backend.apps.tuliunge_backendConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -107,7 +112,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
-     
         'rest_framework.authentication.BasicAuthentication', 
 
     ],
@@ -115,6 +119,7 @@ REST_FRAMEWORK = {
      'DEFAULT_PERMISSION_CLASSES': [
         "rest_framework_api_key.permissions.HasAPIKey",
         'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
 
     'DEFAULT_RENDERER_CLASSES': [
